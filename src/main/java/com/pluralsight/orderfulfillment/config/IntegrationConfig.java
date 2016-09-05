@@ -1,11 +1,17 @@
 package com.pluralsight.orderfulfillment.config;
 
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.component.sql.SqlComponent;
 import org.apache.camel.spring.javaconfig.CamelConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 
+import com.pluralsight.orderfulfillment.order.OrderStatus;
+
 import javax.inject.Inject;
+import javax.sql.DataSource;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,27 +19,39 @@ import java.util.List;
  * Created by pmackiewicz on 2016-09-02.
  */
 @Configuration
-public class IntegrationConfig extends CamelConfiguration{
+public class IntegrationConfig extends CamelConfiguration {
 
-    @Inject
-    private Environment environment;
+	@Inject
+	private Environment environment;
 
-    @Override
-    public List<RouteBuilder> routes() {
+	@Inject
+	private DataSource dataSource;
 
-        List<RouteBuilder> routeList = new ArrayList<>();
+	@Bean
+	public SqlComponent sql() {
+		SqlComponent sqlComponent = new SqlComponent();
+		sqlComponent.setDataSource(dataSource);
+		return sqlComponent;
+	}
 
-        RouteBuilder routeBuilder = new RouteBuilder() {
+	@Bean
+	public RouteBuilder newWebsiteOrderRoute() {
+		return new RouteBuilder() {
 
-            @Override
-            public void configure() throws Exception {
-                from("file://" + environment.getProperty("order.fulfillment.center.1.outbound.folder") + "?noop=true")
-                .to("file://" + environment.getProperty("order.fulfillment.center.1.outbound.folder") + "/test");
+			@Override
+			public void configure() throws Exception {
+				from(
+						"sql:"
+								+ "select id from orders.\"order\" where status = '"
+								+ OrderStatus.NEW.getCode()
+								+ "'"
+								+ "?"
+								+ "consumer.onConsume=update orders.\"order\" set status = '"
+								+ OrderStatus.PROCESSING.getCode() + "'"
+								+ " where id = :#id")
+						.to("log:com.pluralsight.orderfulfillment.order?level=INFO");
+			}
+		};
 
-            }
-        };
-        routeList.add(routeBuilder);
-
-        return routeList;
-    }
+	}
 }
