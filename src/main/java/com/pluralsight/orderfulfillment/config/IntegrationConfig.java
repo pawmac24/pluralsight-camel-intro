@@ -3,6 +3,7 @@ package com.pluralsight.orderfulfillment.config;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.apache.activemq.camel.component.ActiveMQComponent;
 import org.apache.activemq.pool.PooledConnectionFactory;
+import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.builder.xml.Namespaces;
 import org.apache.camel.component.jms.JmsConfiguration;
@@ -119,6 +120,20 @@ public class IntegrationConfig extends CamelConfiguration {
 					
 					.otherwise()
 					.to("activemq:queue:ERROR_FULLFILMENT_REQUEST");				
+			}
+		};
+	}
+	
+	@Bean
+	public RouteBuilder fulfillmentCenterOneRouter(){
+		return new RouteBuilder() {
+			
+			@Override
+			public void configure() throws Exception {
+				from("activemq:queue:FC1_FULLFILMENT_REQUEST")
+					.beanRef("fulfillmentCenterOneProcessor", "transformToOrderRequestMessage")
+					.setHeader(Exchange.CONTENT_TYPE, constant("application/json"))
+					.to("http4://localhost:8090/services/orderFulfillment/processOrders");
 			}
 		};
 	}
