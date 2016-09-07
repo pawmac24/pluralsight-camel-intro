@@ -58,6 +58,8 @@ public class IntegrationConfig extends CamelConfiguration {
 		activeMQ.setConfiguration(jmsConfiguration());
 		return activeMQ;
 	}
+	
+	@Bean
 	public SqlComponent sql() {
 		SqlComponent sqlComponent = new SqlComponent();
 		sqlComponent.setDataSource(dataSource);
